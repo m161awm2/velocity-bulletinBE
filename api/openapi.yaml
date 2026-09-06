@@ -1,0 +1,338 @@
+openapi: 3.1.0
+info:
+  title: Velocity Bulletin API
+  version: 1.0.0
+  description: A small Gin/PostgreSQL bulletin board API designed for ECS Fargate.
+servers:
+  - url: http://localhost:8080
+tags:
+  - name: Auth
+  - name: Users
+  - name: Posts
+  - name: Comments
+  - name: Uploads
+  - name: Admin
+paths:
+  /health/live:
+    get:
+      summary: Process liveness
+      responses:
+        "200": {description: Process is alive}
+  /health/ready:
+    get:
+      summary: Database readiness
+      responses:
+        "200": {description: Ready to receive traffic}
+        "503": {description: Database is unavailable}
+  /api/v1/auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/RegisterRequest"}
+      responses:
+        "201": {$ref: "#/components/responses/AuthResponse"}
+        "400": {$ref: "#/components/responses/Error"}
+        "409": {$ref: "#/components/responses/Error"}
+  /api/v1/auth/login:
+    post:
+      tags: [Auth]
+      summary: Log in
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/LoginRequest"}
+      responses:
+        "200": {$ref: "#/components/responses/AuthResponse"}
+        "401": {$ref: "#/components/responses/Error"}
+  /api/v1/users/me:
+    get:
+      tags: [Users]
+      security: [{bearerAuth: []}]
+      summary: Get the current user
+      responses:
+        "200": {description: Current user}
+        "401": {$ref: "#/components/responses/Error"}
+    patch:
+      tags: [Users]
+      security: [{bearerAuth: []}]
+      summary: Update display name
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [displayName]
+              properties:
+                displayName: {type: string, minLength: 2, maxLength: 40}
+      responses:
+        "200": {description: Updated user}
+        "400": {$ref: "#/components/responses/Error"}
+    delete:
+      tags: [Users]
+      security: [{bearerAuth: []}]
+      summary: Soft-delete the current user
+      responses:
+        "204": {description: User deleted}
+  /api/v1/posts:
+    get:
+      tags: [Posts]
+      summary: Search and list posts
+      parameters:
+        - {in: query, name: search, schema: {type: string}}
+        - {in: query, name: category, schema: {$ref: "#/components/schemas/Category"}}
+        - {in: query, name: sort, schema: {type: string, enum: [latest, views, likes], default: latest}}
+        - {$ref: "#/components/parameters/Page"}
+        - {$ref: "#/components/parameters/Size"}
+      responses:
+        "200": {description: A paginated post list}
+    post:
+      tags: [Posts]
+      security: [{bearerAuth: []}]
+      summary: Create a post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/PostWriteRequest"}
+      responses:
+        "201": {description: Post created}
+        "400": {$ref: "#/components/responses/Error"}
+        "403": {$ref: "#/components/responses/Error"}
+  /api/v1/posts/{id}:
+    parameters:
+      - {$ref: "#/components/parameters/ID"}
+    get:
+      tags: [Posts]
+      summary: Get a post and increment its view count
+      responses:
+        "200": {description: Post detail}
+        "404": {$ref: "#/components/responses/Error"}
+    put:
+      tags: [Posts]
+      security: [{bearerAuth: []}]
+      summary: Replace a post owned by the current user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/PostWriteRequest"}
+      responses:
+        "200": {description: Post updated}
+        "403": {$ref: "#/components/responses/Error"}
+        "404": {$ref: "#/components/responses/Error"}
+    delete:
+      tags: [Posts]
+      security: [{bearerAuth: []}]
+      summary: Soft-delete a post owned by the current user
+      responses:
+        "204": {description: Post deleted}
+        "403": {$ref: "#/components/responses/Error"}
+  /api/v1/posts/{id}/likes/toggle:
+    post:
+      tags: [Posts]
+      security: [{bearerAuth: []}]
+      summary: Toggle the current user's like
+      parameters:
+        - {$ref: "#/components/parameters/ID"}
+      responses:
+        "200":
+          description: Current like state
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  liked: {type: boolean}
+                  likeCount: {type: integer, format: int64}
+  /api/v1/posts/{id}/comments:
+    parameters:
+      - {$ref: "#/components/parameters/ID"}
+    get:
+      tags: [Comments]
+      summary: List comments
+      parameters:
+        - {$ref: "#/components/parameters/Page"}
+        - {$ref: "#/components/parameters/Size"}
+      responses:
+        "200": {description: Paginated comments}
+        "404": {$ref: "#/components/responses/Error"}
+    post:
+      tags: [Comments]
+      security: [{bearerAuth: []}]
+      summary: Create a comment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/CommentWriteRequest"}
+      responses:
+        "201": {description: Comment created}
+  /api/v1/comments/{id}:
+    parameters:
+      - {$ref: "#/components/parameters/ID"}
+    put:
+      tags: [Comments]
+      security: [{bearerAuth: []}]
+      summary: Replace a comment owned by the current user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/CommentWriteRequest"}
+      responses:
+        "200": {description: Comment updated}
+        "403": {$ref: "#/components/responses/Error"}
+    delete:
+      tags: [Comments]
+      security: [{bearerAuth: []}]
+      summary: Soft-delete a comment owned by the current user
+      responses:
+        "204": {description: Comment deleted}
+  /api/v1/uploads/presign:
+    post:
+      tags: [Uploads]
+      security: [{bearerAuth: []}]
+      summary: Create a ten-minute S3 PUT URL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [filename, contentType, size]
+              properties:
+                filename: {type: string}
+                contentType: {type: string, enum: [image/jpeg, image/png, image/webp]}
+                size: {type: integer, maximum: 5242880}
+      responses:
+        "200": {description: Presigned upload details}
+        "400": {$ref: "#/components/responses/Error"}
+        "503": {$ref: "#/components/responses/Error"}
+  /api/v1/admin/users:
+    get:
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      summary: List users
+      parameters:
+        - {$ref: "#/components/parameters/Page"}
+        - {$ref: "#/components/parameters/Size"}
+      responses:
+        "200": {description: Paginated users}
+        "403": {$ref: "#/components/responses/Error"}
+  /api/v1/admin/users/{id}/status:
+    patch:
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      summary: Activate or deactivate a user
+      parameters:
+        - {$ref: "#/components/parameters/ID"}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [active]
+              properties:
+                active: {type: boolean}
+      responses:
+        "204": {description: Status changed}
+        "403": {$ref: "#/components/responses/Error"}
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    ID:
+      in: path
+      name: id
+      required: true
+      schema: {type: string, format: uuid}
+    Page:
+      in: query
+      name: page
+      schema: {type: integer, minimum: 1, default: 1}
+    Size:
+      in: query
+      name: size
+      schema: {type: integer, minimum: 1, maximum: 100, default: 20}
+  responses:
+    AuthResponse:
+      description: Authenticated user and JWT
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              user: {$ref: "#/components/schemas/User"}
+              accessToken: {type: string}
+              expiresAt: {type: string, format: date-time}
+    Error:
+      description: API error
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/Error"}
+  schemas:
+    Category:
+      type: string
+      enum: [GENERAL, QUESTION, NOTICE]
+    RegisterRequest:
+      type: object
+      required: [email, displayName, password]
+      properties:
+        email: {type: string, format: email}
+        displayName: {type: string, minLength: 2, maxLength: 40}
+        password: {type: string, minLength: 8}
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: {type: string, format: email}
+        password: {type: string}
+    User:
+      type: object
+      properties:
+        id: {type: string, format: uuid}
+        email: {type: string, format: email}
+        displayName: {type: string}
+        role: {type: string, enum: [USER, ADMIN]}
+        active: {type: boolean}
+    Image:
+      type: object
+      required: [objectKey, url]
+      properties:
+        objectKey: {type: string}
+        url: {type: string}
+    PostWriteRequest:
+      type: object
+      required: [title, body, category]
+      properties:
+        title: {type: string, minLength: 2, maxLength: 200}
+        body: {type: string, minLength: 1}
+        category: {$ref: "#/components/schemas/Category"}
+        images:
+          type: array
+          maxItems: 5
+          items: {$ref: "#/components/schemas/Image"}
+    CommentWriteRequest:
+      type: object
+      required: [body]
+      properties:
+        body: {type: string, minLength: 1, maxLength: 2000}
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code: {type: string}
+            message: {type: string}
+        requestId: {type: string, format: uuid}

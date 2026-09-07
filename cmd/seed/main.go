@@ -24,7 +24,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	admin, err := service.New(store.New(db)).SeedAdmin(ctx, cfg.AdminEmail, "Administrator", cfg.AdminPassword)
+	admin, err := service.New(store.New(db), "").SeedAdmin(ctx, cfg.AdminEmail, "Administrator", cfg.AdminPassword)
 	if err != nil {
 		log.Fatal(err)
 	}

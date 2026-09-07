@@ -307,10 +307,9 @@ components:
         active: {type: boolean}
     Image:
       type: object
-      required: [objectKey, url]
+      required: [objectKey]
       properties:
-        objectKey: {type: string}
-        url: {type: string}
+        objectKey: {type: string, pattern: "^posts/[0-9a-f-]{36}\\.(jpg|png|webp)$"}
     PostWriteRequest:
       type: object
       required: [title, body, category]

@@ -34,7 +34,7 @@ func main() {
 		os.Exit(1)
 	}
 	st := store.New(db)
-	svc := service.New(st)
+	svc := service.New(st, cfg.S3PublicBaseURL)
 	uploads, err := upload.New(ctx, cfg.AWSRegion, cfg.S3Bucket, cfg.S3PublicBaseURL)
 	if err != nil {
 		logger.Error("upload service startup failed", "error", err)

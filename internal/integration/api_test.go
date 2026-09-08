@@ -37,11 +37,11 @@ func TestRegisterPostCRUDAndAuthorization(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open database: %v", err)
 	}
-	if err := db.AutoMigrate(&model.User{}, &model.Post{}, &model.PostImage{}, &model.Comment{}, &model.Like{}); err != nil {
+	if err := db.AutoMigrate(&model.User{}, &model.Post{}, &model.PostImage{}, &model.Comment{}); err != nil {
 		t.Fatalf("auto migrate: %v", err)
 	}
 	cleanup := func() {
-		if err := db.Exec("TRUNCATE likes, comments, post_images, posts, users CASCADE").Error; err != nil {
+		if err := db.Exec("TRUNCATE comments, post_images, posts, users CASCADE").Error; err != nil {
 			t.Errorf("cleanup: %v", err)
 		}
 	}
@@ -75,7 +75,6 @@ func TestRegisterPostCRUDAndAuthorization(t *testing.T) {
 	request(t, router, http.MethodPut, "/api/v1/posts/"+postID, otherToken, map[string]any{
 		"title": "Stolen", "body": "Must fail", "category": "GENERAL",
 	}, http.StatusForbidden)
-	request(t, router, http.MethodPost, "/api/v1/posts/"+postID+"/likes/toggle", otherToken, nil, http.StatusOK)
 	request(t, router, http.MethodPost, "/api/v1/posts/"+postID+"/comments", otherToken, map[string]any{"body": "Nice post"}, http.StatusCreated)
 	request(t, router, http.MethodDelete, "/api/v1/posts/"+postID, ownerToken, nil, http.StatusNoContent)
 	request(t, router, http.MethodGet, "/api/v1/posts/"+postID, "", nil, http.StatusNotFound)

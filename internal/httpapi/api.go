@@ -51,7 +51,6 @@ func New(svc *service.Service, st *store.Store, tokens *auth.Manager, uploads *u
 	secured.POST("/posts", a.createPost)
 	secured.PUT("/posts/:id", a.updatePost)
 	secured.DELETE("/posts/:id", a.deletePost)
-	secured.POST("/posts/:id/likes/toggle", a.toggleLike)
 	secured.POST("/posts/:id/comments", a.createComment)
 	secured.PUT("/comments/:id", a.updateComment)
 	secured.DELETE("/comments/:id", a.deleteComment)

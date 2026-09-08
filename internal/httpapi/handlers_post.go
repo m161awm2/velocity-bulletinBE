@@ -58,11 +58,11 @@ func (a *API) listPosts(c *gin.Context) {
 		return
 	}
 	sort := c.DefaultQuery("sort", "latest")
-	if sort != "latest" && sort != "views" && sort != "likes" {
-		fail(c, http.StatusBadRequest, "INVALID_SORT", "sort must be latest, views, or likes")
+	if sort != "latest" {
+		fail(c, http.StatusBadRequest, "INVALID_SORT", "only latest sorting is supported")
 		return
 	}
-	posts, total, err := a.service.ListPosts(c.Request.Context(), store.PostFilter{Search: c.Query("search"), Category: category, Sort: sort, Page: page, Size: size})
+	posts, total, err := a.service.ListPosts(c.Request.Context(), store.PostFilter{Search: c.Query("search"), Category: category, Page: page, Size: size})
 	if err != nil {
 		serviceError(c, err)
 		return
@@ -97,17 +97,4 @@ func (a *API) deletePost(c *gin.Context) {
 		return
 	}
 	c.Status(http.StatusNoContent)
-}
-
-func (a *API) toggleLike(c *gin.Context) {
-	id, ok := parseID(c, "id")
-	if !ok {
-		return
-	}
-	liked, count, err := a.service.ToggleLike(c.Request.Context(), actor(c), id)
-	if err != nil {
-		serviceError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{"liked": liked, "likeCount": count})
 }

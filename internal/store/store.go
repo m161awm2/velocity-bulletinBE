@@ -9,7 +9,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/m161awm2/velocity-bulletinBE/internal/model"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 type Store struct{ db *gorm.DB }
@@ -81,7 +80,6 @@ func (s *Store) ListUsers(ctx context.Context, page, size int) ([]model.User, in
 type PostFilter struct {
 	Search   string
 	Category model.Category
-	Sort     string
 	Page     int
 	Size     int
 }
@@ -101,11 +99,6 @@ func (s *Store) PostByID(ctx context.Context, id uuid.UUID) (*model.Post, error)
 	return &post, nil
 }
 
-func (s *Store) IncrementViews(ctx context.Context, id uuid.UUID) error {
-	return s.db.WithContext(ctx).Model(&model.Post{}).Where("id = ?", id).
-		UpdateColumn("view_count", gorm.Expr("view_count + 1")).Error
-}
-
 func (s *Store) ListPosts(ctx context.Context, f PostFilter) ([]model.Post, int64, error) {
 	q := s.db.WithContext(ctx).Model(&model.Post{})
 	if f.Search != "" {
@@ -119,16 +112,9 @@ func (s *Store) ListPosts(ctx context.Context, f PostFilter) ([]model.Post, int6
 	if err := q.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
-	order := "created_at DESC"
-	switch f.Sort {
-	case "views":
-		order = "view_count DESC, created_at DESC"
-	case "likes":
-		order = "like_count DESC, created_at DESC"
-	}
 	var posts []model.Post
 	err := q.Preload("Author").Preload("Images", func(db *gorm.DB) *gorm.DB { return db.Order("position ASC") }).
-		Order(order).Offset((f.Page - 1) * f.Size).Limit(f.Size).Find(&posts).Error
+		Order("created_at DESC").Offset((f.Page - 1) * f.Size).Limit(f.Size).Find(&posts).Error
 	return posts, total, err
 }
 
@@ -161,49 +147,6 @@ func (s *Store) DeletePost(ctx context.Context, id uuid.UUID) error {
 		return gorm.ErrRecordNotFound
 	}
 	return nil
-}
-
-func (s *Store) ToggleLike(ctx context.Context, userID, postID uuid.UUID) (bool, int64, error) {
-	var liked bool
-	var count int64
-	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		var post model.Post
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&post, "id = ?", postID).Error; err != nil {
-			return err
-		}
-		var like model.Like
-		err := tx.First(&like, "user_id = ? AND post_id = ?", userID, postID).Error
-		switch {
-		case err == nil:
-			if err := tx.Delete(&like).Error; err != nil {
-				return err
-			}
-			if err := tx.Model(&post).UpdateColumn("like_count", gorm.Expr("GREATEST(like_count - 1, 0)")).Error; err != nil {
-				return err
-			}
-			liked = false
-		case errors.Is(err, gorm.ErrRecordNotFound):
-			if err := tx.Create(&model.Like{UserID: userID, PostID: postID}).Error; err != nil {
-				return err
-			}
-			if err := tx.Model(&post).UpdateColumn("like_count", gorm.Expr("like_count + 1")).Error; err != nil {
-				return err
-			}
-			liked = true
-		default:
-			return err
-		}
-		return tx.Model(&model.Post{}).Select("like_count").First(&post, "id = ?", postID).Error
-	})
-	if err != nil {
-		return false, 0, err
-	}
-	var post model.Post
-	if err := s.db.WithContext(ctx).Select("like_count").First(&post, "id = ?", postID).Error; err != nil {
-		return false, 0, err
-	}
-	count = post.LikeCount
-	return liked, count, nil
 }
 
 func (s *Store) CreateComment(ctx context.Context, comment *model.Comment) error {

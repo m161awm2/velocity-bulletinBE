@@ -6,9 +6,9 @@ Go, Gin, GORM, PostgreSQL로 만든 의도적으로 작고 단순한 게시판 A
 
 - bcrypt와 단기 만료 HS256 JWT를 사용한 이메일/비밀번호 회원가입 및 로그인
 - 사용자 프로필 수정 및 소프트 삭제
-- 카테고리(`GENERAL`, `QUESTION`, `NOTICE`), 이미지 메타데이터, 검색, 정렬, 페이지네이션, 조회수, 좋아요를 지원하는 게시글 CRUD
+- 카테고리(`GENERAL`, `QUESTION`), 이미지 메타데이터, 검색, 최신순 정렬, 페이지네이션를 지원하는 게시글 CRUD
 - 댓글 CRUD
-- `USER`/`ADMIN` 권한 분리 — 공지 발행 및 사용자 비활성화는 관리자만 가능
+- `USER`/`ADMIN` 권한 분리 — 사용자 비활성화는 관리자만 가능
 - JPEG, PNG, WebP(최대 5MB) 파일에 대한 10분짜리 S3 presigned PUT URL(선택 사항)
 - JSON 접속 로그, 요청 ID, liveness/readiness 프로브, 정상 종료(graceful shutdown)
 - 버전 관리되는 SQL 마이그레이션과 멱등성(idempotent)을 보장하는 관리자 시드 명령
@@ -74,6 +74,8 @@ go test ./internal/integration -v
 통합 테스트는 애플리케이션 테이블을 truncate하므로, 공유 중이거나 운영 중인 데이터베이스를 절대 대상으로 지정하지 마세요.
 
 ## 배포 규약
+
+좋아요·조회수·공지 기능 제거 시 `000002_remove_post_engagement` 마이그레이션을 적용합니다. 기존 공지는 일반 글로 전환하며, 좋아요 기록과 카운터는 삭제합니다. down 마이그레이션은 구조만 복원하며 삭제된 값이나 이전 공지 분류는 복구하지 않습니다. 새 버전은 `sort=latest`만 허용하고 `NOTICE` 입력 및 좋아요 API는 지원하지 않습니다.
 
 - 컨테이너 포트: `8080`
 - ALB 헬스 체크: `/health/ready`

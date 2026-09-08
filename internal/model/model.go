@@ -19,11 +19,10 @@ type Category string
 const (
 	CategoryGeneral  Category = "GENERAL"
 	CategoryQuestion Category = "QUESTION"
-	CategoryNotice   Category = "NOTICE"
 )
 
 func (c Category) Valid() bool {
-	return c == CategoryGeneral || c == CategoryQuestion || c == CategoryNotice
+	return c == CategoryGeneral || c == CategoryQuestion
 }
 
 type User struct {
@@ -52,8 +51,6 @@ type Post struct {
 	Title     string         `gorm:"size:200;not null" json:"title"`
 	Body      string         `gorm:"type:text;not null" json:"body"`
 	Category  Category       `gorm:"type:varchar(16);not null;index" json:"category"`
-	ViewCount int64          `gorm:"not null;default:0" json:"viewCount"`
-	LikeCount int64          `gorm:"not null;default:0" json:"likeCount"`
 	Images    []PostImage    `gorm:"foreignKey:PostID" json:"images"`
 	CreatedAt time.Time      `json:"createdAt"`
 	UpdatedAt time.Time      `json:"updatedAt"`
@@ -98,10 +95,4 @@ func (c *Comment) BeforeCreate(_ *gorm.DB) error {
 		c.ID = uuid.New()
 	}
 	return nil
-}
-
-type Like struct {
-	UserID    uuid.UUID `gorm:"type:uuid;primaryKey"`
-	PostID    uuid.UUID `gorm:"type:uuid;primaryKey;index"`
-	CreatedAt time.Time
 }

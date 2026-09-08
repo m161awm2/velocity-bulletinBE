@@ -19,8 +19,6 @@ type postResponse struct {
 	Title     string            `json:"title"`
 	Body      string            `json:"body"`
 	Category  model.Category    `json:"category"`
-	ViewCount int64             `json:"viewCount"`
-	LikeCount int64             `json:"likeCount"`
 	Images    []model.PostImage `json:"images"`
 	CreatedAt time.Time         `json:"createdAt"`
 	UpdatedAt time.Time         `json:"updatedAt"`
@@ -41,7 +39,7 @@ func presentPost(post *model.Post) postResponse {
 		ID: post.ID, AuthorID: post.AuthorID,
 		Author: publicAuthor{ID: post.Author.ID, DisplayName: post.Author.DisplayName},
 		Title:  post.Title, Body: post.Body, Category: post.Category,
-		ViewCount: post.ViewCount, LikeCount: post.LikeCount, Images: post.Images,
+		Images:    post.Images,
 		CreatedAt: post.CreatedAt, UpdatedAt: post.UpdatedAt,
 	}
 }

@@ -86,7 +86,7 @@ paths:
       parameters:
         - {in: query, name: search, schema: {type: string}}
         - {in: query, name: category, schema: {$ref: "#/components/schemas/Category"}}
-        - {in: query, name: sort, schema: {type: string, enum: [latest, views, likes], default: latest}}
+        - {in: query, name: sort, schema: {type: string, enum: [latest], default: latest}}
         - {$ref: "#/components/parameters/Page"}
         - {$ref: "#/components/parameters/Size"}
       responses:
@@ -109,7 +109,7 @@ paths:
       - {$ref: "#/components/parameters/ID"}
     get:
       tags: [Posts]
-      summary: Get a post and increment its view count
+      summary: Get a post
       responses:
         "200": {description: Post detail}
         "404": {$ref: "#/components/responses/Error"}
@@ -133,23 +133,6 @@ paths:
       responses:
         "204": {description: Post deleted}
         "403": {$ref: "#/components/responses/Error"}
-  /api/v1/posts/{id}/likes/toggle:
-    post:
-      tags: [Posts]
-      security: [{bearerAuth: []}]
-      summary: Toggle the current user's like
-      parameters:
-        - {$ref: "#/components/parameters/ID"}
-      responses:
-        "200":
-          description: Current like state
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  liked: {type: boolean}
-                  likeCount: {type: integer, format: int64}
   /api/v1/posts/{id}/comments:
     parameters:
       - {$ref: "#/components/parameters/ID"}
@@ -283,7 +266,7 @@ components:
   schemas:
     Category:
       type: string
-      enum: [GENERAL, QUESTION, NOTICE]
+      enum: [GENERAL, QUESTION]
     RegisterRequest:
       type: object
       required: [email, displayName, password]

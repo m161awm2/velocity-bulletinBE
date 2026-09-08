@@ -100,18 +100,16 @@ func images(postID uuid.UUID, input []ImageInput) ([]model.PostImage, error) {
 	return result, nil
 }
 
-func validatePost(title, body string, category model.Category, role model.Role) error {
+func validatePost(title, body string, category model.Category) error {
 	if len(strings.TrimSpace(title)) < 2 || len(title) > 200 || len(strings.TrimSpace(body)) < 1 || !category.Valid() {
 		return ErrInvalid
 	}
-	if category == model.CategoryNotice && role != model.RoleAdmin {
-		return ErrForbidden
-	}
+
 	return nil
 }
 
 func (s *Service) CreatePost(ctx context.Context, actor *model.User, title, body string, category model.Category, imageInput []ImageInput) (*model.Post, error) {
-	if err := validatePost(title, body, category, actor.Role); err != nil {
+	if err := validatePost(title, body, category); err != nil {
 		return nil, err
 	}
 	post := &model.Post{ID: uuid.New(), AuthorID: actor.ID, Title: strings.TrimSpace(title), Body: strings.TrimSpace(body), Category: category}
@@ -127,9 +125,6 @@ func (s *Service) CreatePost(ctx context.Context, actor *model.User, title, body
 }
 
 func (s *Service) GetPost(ctx context.Context, id uuid.UUID) (*model.Post, error) {
-	if err := s.store.IncrementViews(ctx, id); err != nil {
-		return nil, err
-	}
 	post, err := s.store.PostByID(ctx, id)
 	if store.IsNotFound(err) {
 		return nil, ErrNotFound
@@ -156,7 +151,7 @@ func (s *Service) UpdatePost(ctx context.Context, actor *model.User, id uuid.UUI
 	if !canModify(post.AuthorID, actor) {
 		return nil, ErrForbidden
 	}
-	if err := validatePost(title, body, category, actor.Role); err != nil {
+	if err := validatePost(title, body, category); err != nil {
 		return nil, err
 	}
 	post.Title, post.Body, post.Category = strings.TrimSpace(title), strings.TrimSpace(body), category
@@ -184,14 +179,6 @@ func (s *Service) DeletePost(ctx context.Context, actor *model.User, id uuid.UUI
 		return ErrForbidden
 	}
 	return s.store.DeletePost(ctx, id)
-}
-
-func (s *Service) ToggleLike(ctx context.Context, actor *model.User, postID uuid.UUID) (bool, int64, error) {
-	liked, count, err := s.store.ToggleLike(ctx, actor.ID, postID)
-	if store.IsNotFound(err) {
-		return false, 0, ErrNotFound
-	}
-	return liked, count, err
 }
 
 func (s *Service) CreateComment(ctx context.Context, actor *model.User, postID uuid.UUID, body string) (*model.Comment, error) {

@@ -62,7 +62,7 @@ func (s *Service) Presign(ctx context.Context, filename, contentType string, siz
 			return nil, errors.New("filename extension does not match content type")
 		}
 	}
-	objectKey := "posts/" + uuid.NewString() + ext
+	objectKey := "media/" + uuid.NewString() + ext
 	expiresAt := time.Now().UTC().Add(10 * time.Minute)
 	request, err := s.presigner.PresignPutObject(ctx, &s3.PutObjectInput{
 		Bucket: aws.String(s.bucket), Key: aws.String(objectKey), ContentType: aws.String(contentType), ContentLength: aws.Int64(size),

@@ -91,7 +91,7 @@ type ImageInput struct {
 	ObjectKey string `json:"objectKey"`
 }
 
-var objectKeyPattern = regexp.MustCompile(`^posts/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(jpg|png|webp)$`)
+var objectKeyPattern = regexp.MustCompile(`^media/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(jpg|png|webp)$`)
 
 func (s *Service) publicURL(objectKey string) string {
 	if s.imageBaseURL == "" {

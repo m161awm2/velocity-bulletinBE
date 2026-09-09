@@ -51,7 +51,7 @@ curl -X POST http://localhost:8080/api/v1/auth/register \
 
 ECS에서는 데이터베이스 URL, JWT 시크릿 등의 민감한 값을 태스크 정의의 Secrets Manager 참조를 통해 주입하세요. 애플리케이션은 오직 환경 변수만 읽기 때문에 시크릿 제공 방식에 종속되지 않습니다.
 
-업로드 기능을 사용하려면 Fargate 태스크 역할에 `arn:aws:s3:::<bucket>/posts/*`에 대한 `s3:PutObject` 권한이 필요합니다. AWS SDK의 기본 자격 증명 탐색이 태스크 역할을 자동으로 사용하므로, 환경 변수 파일에 AWS 액세스 키를 넣지 마세요.
+업로드 기능을 사용하려면 Fargate 태스크 역할에 `arn:aws:s3:::<bucket>/media/*`에 대한 `s3:PutObject` 권한이 필요합니다. AWS SDK의 기본 자격 증명 탐색이 태스크 역할을 자동으로 사용하므로, 환경 변수 파일에 AWS 액세스 키를 넣지 마세요.
 
 ## 주요 명령어
 

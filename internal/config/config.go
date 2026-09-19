@@ -41,14 +41,14 @@ func load(requireJWT bool) (Config, error) {
 	cfg := Config{
 		Environment:     env("APP_ENV", "development"),
 		HTTPAddr:        env("HTTP_ADDR", ":8080"),
-		DatabaseURL:     os.Getenv("DATABASE_URL"),
-		MigrationDBURL:  os.Getenv("MIGRATION_DATABASE_URL"),
-		JWTSecret:       os.Getenv("JWT_SECRET"),
+		DatabaseURL:     strings.TrimSpace(os.Getenv("DATABASE_URL")),
+		MigrationDBURL:  strings.TrimSpace(os.Getenv("MIGRATION_DATABASE_URL")),
+		JWTSecret:       strings.TrimSpace(os.Getenv("JWT_SECRET")),
 		AdminEmail:      strings.ToLower(strings.TrimSpace(os.Getenv("ADMIN_EMAIL"))),
-		AdminPassword:   os.Getenv("ADMIN_PASSWORD"),
+		AdminPassword:   strings.TrimSpace(os.Getenv("ADMIN_PASSWORD")),
 		AWSRegion:       env("AWS_REGION", "ap-northeast-2"),
-		S3Bucket:        os.Getenv("S3_BUCKET"),
-		S3PublicBaseURL: strings.TrimRight(os.Getenv("S3_PUBLIC_BASE_URL"), "/"),
+		S3Bucket:        strings.TrimSpace(os.Getenv("S3_BUCKET")),
+		S3PublicBaseURL: strings.TrimRight(strings.TrimSpace(os.Getenv("S3_PUBLIC_BASE_URL")), "/"),
 	}
 	var problems []string
 	var err error
@@ -69,7 +69,7 @@ func load(requireJWT bool) (Config, error) {
 			cfg.CORSOrigins = append(cfg.CORSOrigins, value)
 		}
 	}
-	if cfg.DatabaseURL == "" {
+	if strings.ReplaceAll(cfg.DatabaseURL, " ", "") == "" {
 		problems = append(problems, "DATABASE_URL is required")
 	}
 	if requireJWT && len(cfg.JWTSecret) < 32 {

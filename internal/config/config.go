@@ -101,7 +101,7 @@ func env(key, fallback string) string {
 }
 
 func envInt(key string, fallback int) (int, error) {
-	value := os.Getenv(key)
+	value := strings.TrimSpace(os.Getenv(key))
 	if value == "" {
 		return fallback, nil
 	}

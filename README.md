@@ -11,7 +11,7 @@ Go, Gin, GORM, PostgreSQL로 만든 의도적으로 작고 단순한 게시판 A
 - `USER`/`ADMIN` 권한 분리 — 사용자 비활성화는 관리자만 가능
 - JPEG, PNG, WebP(최대 5MB) 파일에 대한 10분짜리 S3 presigned PUT URL(선택 사항)
 - JSON 접속 로그, 요청 ID, liveness/readiness 프로브, 정상 종료(graceful shutdown)
-- 버전 관리되는 SQL 마이그레이션과 멱등성(idempotent)을 보장하는 관리자 시드 명령
+- GORM 모델 기반 AutoMigrate와 멱등성(idempotent)을 보장하는 관리자 시드 명령
 
 ## 로컬 실행
 
@@ -21,7 +21,7 @@ Go, Gin, GORM, PostgreSQL로 만든 의도적으로 작고 단순한 게시판 A
 cp .env.example .env
 docker compose up -d postgres
 set -a; source .env; set +a
-go run ./cmd/migrate -action up
+go run ./cmd/migrate
 go run ./cmd/seed
 go run ./cmd/server
 ```
@@ -58,8 +58,7 @@ ECS에서는 데이터베이스 URL, JWT 시크릿 등의 민감한 값을 태�
 ```bash
 make build
 make test
-make migrate-up
-make migrate-down
+make migrate
 make seed
 ```
 
@@ -75,7 +74,9 @@ go test ./internal/integration -v
 
 ## 배포 규약
 
-좋아요·조회수·공지 기능 제거 시 `000002_remove_post_engagement` 마이그레이션을 적용합니다. 기존 공지는 일반 글로 전환하며, 좋아요 기록과 카운터는 삭제합니다. down 마이그레이션은 구조만 복원하며 삭제된 값이나 이전 공지 분류는 복구하지 않습니다. 새 버전은 `sort=latest`만 허용하고 `NOTICE` 입력 및 좋아요 API는 지원하지 않습니다.
+DB 구조는 `internal/model/model.go`의 GORM 모델과 태그로 관리합니다. `make migrate`는 AutoMigrate를 실행하며 서버 시작 시에는 실행하지 않습니다. 기존 `make migrate-up`과 `-action up`도 지원하지만 버전별 `down/steps` 롤백은 지원하지 않습니다. 향후 컬럼 삭제·이름 변경·데이터 변환은 별도 Go 코드로 처리해야 합니다.
+
+기존 SQL 버전 1 DB는 최초 실행 시 공지를 일반 글로 전환하고 좋아요 테이블·카운터를 삭제합니다. 버전 2 DB는 현재 모델에 맞춰 동기화합니다. 전체 작업은 하나의 트랜잭션으로 실행되며 성공하면 기존 `schema_migrations` 테이블을 제거합니다. 실패 상태(dirty) 또는 알 수 없는 버전에서는 중단합니다. 기존 DB 전환 전에는 백업하세요. 삭제된 좋아요·카운터는 자동 복구되지 않습니다.
 
 - 컨테이너 포트: `8080`
 - ALB 헬스 체크: `/health/ready`

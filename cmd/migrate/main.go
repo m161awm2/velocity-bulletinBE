@@ -1,48 +1,37 @@
 package main
 
 import (
+	"context"
 	"flag"
-	"fmt"
 	"log"
-	"os"
 
-	"github.com/golang-migrate/migrate/v4"
-	_ "github.com/golang-migrate/migrate/v4/database/postgres"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/m161awm2/velocity-bulletinBE/internal/config"
+	"github.com/m161awm2/velocity-bulletinBE/internal/database"
 )
 
 func main() {
-	action := flag.String("action", "up", "migration action: up or down")
-	steps := flag.Int("steps", 0, "number of migrations; zero means all")
+	// Preserve existing deployment invocations using -action up.
+	action := flag.String("action", "up", "migration action: up (AutoMigrate only)")
 	flag.Parse()
+	if *action != "up" || flag.NArg() != 0 {
+		log.Fatal("only AutoMigrate is supported; down/steps are no longer available")
+	}
 	cfg, err := config.LoadDatabase()
 	if err != nil {
 		log.Fatal(err)
 	}
-	m, err := migrate.New("file://migrations", cfg.MigrationURL())
+	cfg.DatabaseURL = cfg.MigrationURL()
+	db, err := database.Open(context.Background(), cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer func() { _, _ = m.Close() }()
-	switch *action {
-	case "up":
-		if *steps > 0 {
-			err = m.Steps(*steps)
-		} else {
-			err = m.Up()
-		}
-	case "down":
-		if *steps <= 0 {
-			log.Fatal("-steps must be positive for down migrations")
-		}
-		err = m.Steps(-*steps)
-	default:
-		fmt.Fprintln(os.Stderr, "action must be up or down")
-		os.Exit(2)
-	}
-	if err != nil && err != migrate.ErrNoChange {
+	sqlDB, err := db.DB()
+	if err != nil {
 		log.Fatal(err)
 	}
-	log.Println("migration complete")
+	defer sqlDB.Close()
+	if err := database.Migrate(db); err != nil {
+		log.Fatal(err)
+	}
+	log.Println("auto migration complete")
 }

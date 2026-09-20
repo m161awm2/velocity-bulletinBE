@@ -1,4 +1,4 @@
-.PHONY: run build test test-integration migrate-up migrate-down seed db-up db-down
+.PHONY: run build test test-integration migrate migrate-up seed db-up db-down
 
 run:
 	go run ./cmd/server
@@ -12,11 +12,8 @@ test:
 test-integration:
 	ALLOW_INTEGRATION_DB_RESET=true go test ./internal/integration -v
 
-migrate-up:
-	go run ./cmd/migrate -action up
-
-migrate-down:
-	go run ./cmd/migrate -action down -steps 1
+migrate migrate-up:
+	go run ./cmd/migrate
 
 seed:
 	go run ./cmd/seed

@@ -18,7 +18,6 @@ import (
 	"github.com/m161awm2/velocity-bulletinBE/internal/config"
 	"github.com/m161awm2/velocity-bulletinBE/internal/database"
 	"github.com/m161awm2/velocity-bulletinBE/internal/httpapi"
-	"github.com/m161awm2/velocity-bulletinBE/internal/model"
 	"github.com/m161awm2/velocity-bulletinBE/internal/service"
 	"github.com/m161awm2/velocity-bulletinBE/internal/store"
 	"github.com/m161awm2/velocity-bulletinBE/internal/upload"
@@ -37,7 +36,7 @@ func TestRegisterPostCRUDAndAuthorization(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open database: %v", err)
 	}
-	if err := db.AutoMigrate(&model.User{}, &model.Post{}, &model.PostImage{}, &model.Comment{}); err != nil {
+	if err := database.Migrate(db); err != nil {
 		t.Fatalf("auto migrate: %v", err)
 	}
 	cleanup := func() {

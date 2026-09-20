@@ -27,13 +27,13 @@ func (c Category) Valid() bool {
 
 type User struct {
 	ID           uuid.UUID      `gorm:"type:uuid;primaryKey" json:"id"`
-	Email        string         `gorm:"uniqueIndex;size:320;not null" json:"email"`
+	Email        string         `gorm:"unique;size:320;not null" json:"email"`
 	DisplayName  string         `gorm:"size:40;not null" json:"displayName"`
 	PasswordHash string         `gorm:"not null" json:"-"`
-	Role         Role           `gorm:"type:varchar(16);not null;default:USER" json:"role"`
+	Role         Role           `gorm:"type:varchar(16);not null;default:USER;check:users_role_check,role IN ('USER','ADMIN')" json:"role"`
 	Active       bool           `gorm:"not null;default:true" json:"active"`
-	CreatedAt    time.Time      `json:"createdAt"`
-	UpdatedAt    time.Time      `json:"updatedAt"`
+	CreatedAt    time.Time      `gorm:"not null;default:now()" json:"createdAt"`
+	UpdatedAt    time.Time      `gorm:"not null;default:now()" json:"updatedAt"`
 	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
@@ -47,13 +47,13 @@ func (u *User) BeforeCreate(_ *gorm.DB) error {
 type Post struct {
 	ID        uuid.UUID      `gorm:"type:uuid;primaryKey" json:"id"`
 	AuthorID  uuid.UUID      `gorm:"type:uuid;not null;index" json:"authorId"`
-	Author    User           `gorm:"foreignKey:AuthorID" json:"author"`
+	Author    User           `gorm:"foreignKey:AuthorID;constraint:posts_author_id_fkey" json:"author"`
 	Title     string         `gorm:"size:200;not null" json:"title"`
 	Body      string         `gorm:"type:text;not null" json:"body"`
-	Category  Category       `gorm:"type:varchar(16);not null;index" json:"category"`
-	Images    []PostImage    `gorm:"foreignKey:PostID" json:"images"`
-	CreatedAt time.Time      `json:"createdAt"`
-	UpdatedAt time.Time      `json:"updatedAt"`
+	Category  Category       `gorm:"type:varchar(16);not null;index;check:posts_category_check,category IN ('GENERAL','QUESTION')" json:"category"`
+	Images    []PostImage    `gorm:"foreignKey:PostID;constraint:post_images_post_id_fkey,OnDelete:CASCADE" json:"images"`
+	CreatedAt time.Time      `gorm:"not null;default:now();index:idx_posts_created_at,sort:desc" json:"createdAt"`
+	UpdatedAt time.Time      `gorm:"not null;default:now()" json:"updatedAt"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
@@ -66,10 +66,10 @@ func (p *Post) BeforeCreate(_ *gorm.DB) error {
 
 type PostImage struct {
 	ID        uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
-	PostID    uuid.UUID `gorm:"type:uuid;not null;index" json:"-"`
+	PostID    uuid.UUID `gorm:"type:uuid;not null;index;uniqueIndex:post_images_post_id_position_key" json:"-"`
 	ObjectKey string    `gorm:"size:512;not null" json:"objectKey"`
 	URL       string    `gorm:"size:1024;not null" json:"url"`
-	Position  int       `gorm:"not null" json:"position"`
+	Position  int       `gorm:"type:integer;not null;uniqueIndex:post_images_post_id_position_key" json:"position"`
 }
 
 func (i *PostImage) BeforeCreate(_ *gorm.DB) error {
@@ -80,13 +80,14 @@ func (i *PostImage) BeforeCreate(_ *gorm.DB) error {
 }
 
 type Comment struct {
+	Post      Post           `gorm:"foreignKey:PostID;constraint:comments_post_id_fkey" json:"-"`
 	ID        uuid.UUID      `gorm:"type:uuid;primaryKey" json:"id"`
 	PostID    uuid.UUID      `gorm:"type:uuid;not null;index" json:"postId"`
 	AuthorID  uuid.UUID      `gorm:"type:uuid;not null;index" json:"authorId"`
-	Author    User           `gorm:"foreignKey:AuthorID" json:"author"`
+	Author    User           `gorm:"foreignKey:AuthorID;constraint:comments_author_id_fkey" json:"author"`
 	Body      string         `gorm:"type:text;not null" json:"body"`
-	CreatedAt time.Time      `json:"createdAt"`
-	UpdatedAt time.Time      `json:"updatedAt"`
+	CreatedAt time.Time      `gorm:"not null;default:now()" json:"createdAt"`
+	UpdatedAt time.Time      `gorm:"not null;default:now()" json:"updatedAt"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 }
 

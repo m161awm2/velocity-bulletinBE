@@ -14,7 +14,6 @@ RUN apk add --no-cache ca-certificates && adduser -D -H -u 10001 app
 WORKDIR /app
 
 COPY --from=build /out/ /app/
-COPY migrations/ /app/migrations/
 COPY api/openapi.yaml /app/api/openapi.yaml
 
 USER app

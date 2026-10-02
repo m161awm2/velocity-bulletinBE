@@ -28,8 +28,8 @@ type API struct {
 
 func New(svc *service.Service, st *store.Store, tokens *auth.Manager, logger *log.Logger, corsOrigins []string) *gin.Engine {
 	a := &API{service: svc, store: st, tokens: tokens, logger: logger}
-	r := gin.New()
-	r.Use(a.requestID(), a.accessLog(), gin.Recovery(), cors(corsOrigins), bodyLimit(1<<20))
+	r := gin.Default()
+	r.Use(a.requestID(), a.accessLog(), cors(corsOrigins), bodyLimit(1<<20))
 	r.GET("/health/live", a.live)
 	r.GET("/health/ready", a.ready)
 

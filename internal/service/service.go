@@ -2,12 +2,17 @@ package service
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/mail"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
+	"github.com/m161awm2/velocity-bulletinBE/internal/cache"
 	"github.com/m161awm2/velocity-bulletinBE/internal/model"
 	"github.com/m161awm2/velocity-bulletinBE/internal/store"
 	"golang.org/x/crypto/bcrypt"
@@ -22,11 +27,20 @@ var (
 )
 
 type Service struct {
-	store *store.Store
+	store    *store.Store
+	cache    cache.Cache
+	cacheTTL time.Duration
 }
 
 func New(st *store.Store) *Service {
-	return &Service{store: st}
+	return NewWithCache(st, nil, 30*time.Second)
+}
+
+func NewWithCache(st *store.Store, responseCache cache.Cache, ttl time.Duration) *Service {
+	if ttl <= 0 {
+		ttl = 30 * time.Second
+	}
+	return &Service{store: st, cache: responseCache, cacheTTL: ttl}
 }
 
 func (s *Service) Register(ctx context.Context, email, displayName, password string) (*model.User, error) {
@@ -105,15 +119,65 @@ func (s *Service) CreatePost(ctx context.Context, actor *model.User, title, body
 }
 
 func (s *Service) GetPost(ctx context.Context, id uuid.UUID) (*model.Post, error) {
+	key := "posts:detail:v1:" + id.String()
+	if s.cache != nil {
+		if value, err := s.cache.Get(ctx, key); err == nil {
+			var post model.Post
+			if json.Unmarshal(value, &post) == nil {
+				return &post, nil
+			}
+		}
+	}
 	post, err := s.store.PostByID(ctx, id)
 	if store.IsNotFound(err) {
 		return nil, ErrNotFound
+	}
+	if err == nil && s.cache != nil {
+		if value, marshalErr := json.Marshal(post); marshalErr == nil {
+			_ = s.cache.Set(ctx, key, value, s.cacheTTL)
+		}
 	}
 	return post, err
 }
 
 func (s *Service) ListPosts(ctx context.Context, filter store.PostFilter) ([]model.Post, int64, error) {
-	return s.store.ListPosts(ctx, filter)
+	key := postListCacheKey(filter)
+	if s.cache != nil {
+		if value, err := s.cache.Get(ctx, key); err == nil {
+			var cached struct {
+				Items []model.Post `json:"items"`
+				Total int64        `json:"total"`
+			}
+			if json.Unmarshal(value, &cached) == nil {
+				return cached.Items, cached.Total, nil
+			}
+		}
+	}
+	posts, total, err := s.store.ListPosts(ctx, filter)
+	if err == nil && s.cache != nil {
+		if value, marshalErr := json.Marshal(struct {
+			Items []model.Post `json:"items"`
+			Total int64        `json:"total"`
+		}{Items: posts, Total: total}); marshalErr == nil {
+			_ = s.cache.Set(ctx, key, value, s.cacheTTL)
+		}
+	}
+	return posts, total, err
+}
+
+func postListCacheKey(filter store.PostFilter) string {
+	category := ""
+	if filter.Category.Valid() {
+		category = string(filter.Category)
+	}
+	canonical, _ := json.Marshal(struct {
+		Search   string `json:"search"`
+		Category string `json:"category"`
+		Page     int    `json:"page"`
+		Size     int    `json:"size"`
+	}{strings.TrimSpace(filter.Search), category, filter.Page, filter.Size})
+	hash := sha256.Sum256(canonical)
+	return "posts:list:v1:" + hex.EncodeToString(hash[:])
 }
 
 func canModify(owner uuid.UUID, actor *model.User) bool {

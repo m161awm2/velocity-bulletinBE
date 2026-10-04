@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/m161awm2/velocity-bulletinBE/internal/auth"
+	"github.com/m161awm2/velocity-bulletinBE/internal/cache"
 	"github.com/m161awm2/velocity-bulletinBE/internal/config"
 	"github.com/m161awm2/velocity-bulletinBE/internal/database"
 	"github.com/m161awm2/velocity-bulletinBE/internal/httpapi"
@@ -32,7 +33,23 @@ func main() {
 		os.Exit(1)
 	}
 	st := store.New(db)
-	svc := service.New(st)
+	redisCache, err := cache.NewRedis(cfg.RedisURL)
+	if err != nil {
+		logger.Println("invalid Redis configuration; cache disabled:", err)
+	}
+	var responseCache cache.Cache
+	if redisCache != nil {
+		pingCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+		if err := redisCache.Ping(pingCtx); err != nil {
+			logger.Println("Redis unavailable; requests will use PostgreSQL until Redis recovers:", err)
+		} else {
+			logger.Println("Redis cache connected")
+		}
+		cancel()
+		defer redisCache.Close()
+		responseCache = redisCache
+	}
+	svc := service.NewWithCache(st, responseCache, 30*time.Second)
 	router := httpapi.New(svc, st, auth.New(cfg.JWTSecret, cfg.JWTTTL), logger, cfg.CORSOrigins)
 	server := &http.Server{
 		Addr: cfg.HTTPAddr, Handler: router, ReadHeaderTimeout: 5 * time.Second,

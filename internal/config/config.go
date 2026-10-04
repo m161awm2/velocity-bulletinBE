@@ -13,6 +13,7 @@ type Config struct {
 	HTTPAddr          string
 	DatabaseURL       string
 	MigrationDBURL    string
+	RedisURL          string
 	JWTSecret         string
 	JWTTTL            time.Duration
 	CORSOrigins       []string
@@ -38,6 +39,7 @@ func load(requireJWT bool) (Config, error) {
 		HTTPAddr:       env("HTTP_ADDR", ":8080"),
 		DatabaseURL:    strings.TrimSpace(os.Getenv("DATABASE_URL")),
 		MigrationDBURL: strings.TrimSpace(os.Getenv("MIGRATION_DATABASE_URL")),
+		RedisURL:       strings.TrimSpace(env("REDIS_URL", "redis://localhost:6379/0")),
 		JWTSecret:      strings.TrimSpace(os.Getenv("JWT_SECRET")),
 		AdminEmail:     strings.ToLower(strings.TrimSpace(os.Getenv("ADMIN_EMAIL"))),
 		AdminPassword:  strings.TrimSpace(os.Getenv("ADMIN_PASSWORD")),

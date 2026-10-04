@@ -18,7 +18,7 @@ Go, Gin, GORM, PostgreSQL로 만든 의도적으로 작고 단순한 게시판 A
 
 ```bash
 cp .env.example .env
-docker compose up -d postgres
+docker compose up -d postgres redis
 set -a; source .env; set +a
 go run ./cmd/migrate
 go run ./cmd/seed
@@ -40,12 +40,17 @@ curl -X POST http://localhost:8080/api/v1/auth/register \
 | `HTTP_ADDR` | 서버 리스닝 주소 | `:8080` |
 | `DATABASE_URL` | 런타임 PostgreSQL URL, Neon의 pooled URL 사용 | 필수 |
 | `MIGRATION_DATABASE_URL` | 마이그레이션용 URL, Neon의 direct URL 사용 | `DATABASE_URL` |
+| `REDIS_URL` | 게시글 목록·상세 응답 캐시용 Redis URL | `redis://localhost:6379/0` |
 | `JWT_SECRET` | HS256 시크릿, 32자 이상 | 필수 |
 | `JWT_TTL` | 액세스 토큰 유효 기간 | `1h` |
 | `CORS_ORIGINS` | 콤마로 구분된 프론트엔드 origin 목록 | `http://localhost:3000` |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | `cmd/seed`에서 사용하는 값 | 서버 실행 시 선택 |
 
 ECS에서는 데이터베이스 URL, JWT 시크릿 등의 민감한 값을 태스크 정의의 Secrets Manager 참조를 통해 주입하세요. 애플리케이션은 오직 환경 변수만 읽기 때문에 시크릿 제공 방식에 종속되지 않습니다.
+
+Redis는 `GET /api/v1/posts` 게시글 목록과 `GET /api/v1/posts/:id` 게시글 상세 응답을 30초 동안 캐시합니다. 검색·카테고리·페이지·페이지 크기별로 목록 캐시를 분리합니다. 게시글 변경 직후에도 만료되기 전까지 이전 응답이 보일 수 있습니다. Redis 장애나 캐시 오류가 있어도 요청은 PostgreSQL로 처리되며, Redis는 readiness 검사에 포함되지 않습니다. JWT는 Redis에 저장하지 않고 기존과 같이 서명과 만료 시각으로 검증합니다.
+
+운영 Redis는 AWS ElastiCache 같은 관리형 Redis 호환 엔드포인트를 `REDIS_URL`에 지정합니다. 예: TLS 미사용이면 `redis://<endpoint>:6379/0`, TLS 사용 시 `rediss://<endpoint>:6379/0`; 인증을 쓰면 URL에 사용자명과 비밀번호를 포함할 수 있습니다. 인증 정보가 든 URL은 ECS 태스크 환경에 평문으로 직접 넣지 말고 Secrets Manager에서 주입하세요. Fargate 태스크가 ElastiCache 엔드포인트에 네트워크로 접근할 수 있도록 VPC와 보안 그룹을 구성해야 합니다. 현재 클라이언트는 클러스터 모드가 비활성화된 단일 기본 엔드포인트 구성을 대상으로 합니다. 클러스터 모드 활성화 구성을 선택하면 클러스터 클라이언트로 변경해야 합니다.
 
 업로드 기능을 사용하려면 Fargate 태스크 역할에 `arn:aws:s3:::<bucket>/media/*`에 대한 `s3:PutObject` 권한이 필요합니다. AWS SDK의 기본 자격 증명 탐색이 태스크 역할을 자동으로 사용하므로, 환경 변수 파일에 AWS 액세스 키를 넣지 마세요.
 

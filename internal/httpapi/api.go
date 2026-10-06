@@ -41,7 +41,7 @@ func New(svc *service.Service, st *store.Store, tokens *auth.Manager, logger *lo
 	v1.GET("/posts/:id/comments", a.listComments)
 
 	secured := v1.Group("")
-	secured.Use(a.authenticate())
+	secured.Use(a.authenticate)
 	secured.GET("/users/me", a.me)
 	secured.PATCH("/users/me", a.updateMe)
 	secured.DELETE("/users/me", a.deleteMe)
@@ -135,27 +135,25 @@ func contextWithTimeout(c *gin.Context, timeout time.Duration) (context.Context,
 	return context.WithTimeout(c.Request.Context(), timeout)
 }
 
-func (a *API) authenticate() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		header := c.GetHeader("Authorization")
-		parts := strings.SplitN(header, " ", 2)
-		if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
-			fail(c, http.StatusUnauthorized, "UNAUTHORIZED", "bearer token required")
-			return
-		}
-		id, err := a.tokens.Parse(parts[1])
-		if err != nil {
-			fail(c, http.StatusUnauthorized, "UNAUTHORIZED", "invalid token")
-			return
-		}
-		user, err := a.service.User(c.Request.Context(), id)
-		if err != nil || !user.Active {
-			fail(c, http.StatusUnauthorized, "UNAUTHORIZED", "user is unavailable")
-			return
-		}
-		c.Set(actorKey, user)
-		c.Next()
+func (a *API) authenticate(c *gin.Context) {
+	header := c.GetHeader("Authorization")
+	parts := strings.SplitN(header, " ", 2)
+	if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
+		fail(c, http.StatusUnauthorized, "UNAUTHORIZED", "bearer token required")
+		return
 	}
+	id, err := a.tokens.Parse(parts[1])
+	if err != nil {
+		fail(c, http.StatusUnauthorized, "UNAUTHORIZED", "invalid token")
+		return
+	}
+	user, err := a.service.User(c.Request.Context(), id)
+	if err != nil || !user.Active {
+		fail(c, http.StatusUnauthorized, "UNAUTHORIZED", "user is unavailable")
+		return
+	}
+	c.Set(actorKey, user)
+	c.Next()
 }
 
 func (a *API) requireAdmin() gin.HandlerFunc {

@@ -1,6 +1,6 @@
 # Velocity Bulletin Backend
 
-Go, Gin, GORM, PostgreSQL로 만든 의도적으로 작고 단순한 게시판 API입니다. ECS Fargate 위에서 상태 없는(stateless) 컨테이너로 동작하도록 설계되었으며, PostgreSQL은 Neon을 사용합니다.
+Go, Gin, GORM, PostgreSQL로 만든 게시판 velocity-bulletin의 REST API 입니다.
 
 ## 주요 기능
 
@@ -8,13 +8,9 @@ Go, Gin, GORM, PostgreSQL로 만든 의도적으로 작고 단순한 게시판 A
 - 사용자 프로필 수정 및 소프트 삭제
 - 카테고리(`GENERAL`, `QUESTION`), 이미지 메타데이터, 검색, 최신순 정렬, 페이지네이션를 지원하는 게시글 CRUD
 - 댓글 CRUD
-- `USER`/`ADMIN` 권한 분리 — 사용자 비활성화는 관리자만 가능
-- JSON 접속 로그, 요청 ID, liveness/readiness 프로브, 정상 종료(graceful shutdown)
-- GORM 모델 기반 AutoMigrate와 멱등성(idempotent)을 보장하는 관리자 시드 명령
+
 
 ## 로컬 실행
-
-요구 사항: Go 1.26+, Docker, Docker Compose
 
 ```bash
 cp .env.example .env
@@ -46,8 +42,6 @@ curl -X POST http://localhost:8080/api/v1/auth/register \
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | `cmd/seed`에서 사용하는 값 | 서버 실행 시 선택 |
 
 ECS에서는 데이터베이스 URL, JWT 시크릿 등의 민감한 값을 태스크 정의의 Secrets Manager 참조를 통해 주입하세요. 애플리케이션은 오직 환경 변수만 읽기 때문에 시크릿 제공 방식에 종속되지 않습니다.
-
-업로드 기능을 사용하려면 Fargate 태스크 역할에 `arn:aws:s3:::<bucket>/media/*`에 대한 `s3:PutObject` 권한이 필요합니다. AWS SDK의 기본 자격 증명 탐색이 태스크 역할을 자동으로 사용하므로, 환경 변수 파일에 AWS 액세스 키를 넣지 마세요.
 
 ## 주요 명령어
 
@@ -90,3 +84,4 @@ DB 구조는 `internal/model/model.go`의 GORM 모델과 태그로 관리합니�
 ## API 문서
 
 엔드포인트, 인증, 페이지네이션, 오류 응답의 상세 내용은 [API reference](./docs/api.md)를 참고하세요.
+ㄴㄴㄴ

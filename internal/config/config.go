@@ -12,7 +12,6 @@ import (
 type Config struct {
 	HTTPAddr          string
 	DatabaseURL       string
-	MigrationDBURL    string
 	JWTSecret         string
 	JWTTTL            time.Duration
 	CORSOrigins       []string
@@ -35,12 +34,11 @@ func LoadDatabase() (Config, error) {
 
 func load(requireJWT bool) (Config, error) {
 	cfg := Config{
-		HTTPAddr:       env("HTTP_ADDR", ":8080"),
-		DatabaseURL:    strings.TrimSpace(os.Getenv("DATABASE_URL")),
-		MigrationDBURL: strings.TrimSpace(os.Getenv("MIGRATION_DATABASE_URL")),
-		JWTSecret:      strings.TrimSpace(os.Getenv("JWT_SECRET")),
-		AdminEmail:     strings.ToLower(strings.TrimSpace(os.Getenv("ADMIN_EMAIL"))),
-		AdminPassword:  strings.TrimSpace(os.Getenv("ADMIN_PASSWORD")),
+		HTTPAddr:      env("HTTP_ADDR", ":8080"),
+		DatabaseURL:   strings.TrimSpace(os.Getenv("DATABASE_URL")),
+		JWTSecret:     strings.TrimSpace(os.Getenv("JWT_SECRET")),
+		AdminEmail:    strings.ToLower(strings.TrimSpace(os.Getenv("ADMIN_EMAIL"))),
+		AdminPassword: strings.TrimSpace(os.Getenv("ADMIN_PASSWORD")),
 	}
 	var problems []string
 	var err error
@@ -74,13 +72,6 @@ func load(requireJWT bool) (Config, error) {
 		return Config{}, errors.New(strings.Join(problems, "; "))
 	}
 	return cfg, nil
-}
-
-func (c Config) MigrationURL() string {
-	if c.MigrationDBURL != "" {
-		return c.MigrationDBURL
-	}
-	return c.DatabaseURL
 }
 
 func env(key, fallback string) string {

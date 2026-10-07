@@ -20,7 +20,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	cfg.DatabaseURL = cfg.MigrationURL()
 	db, err := database.Open(context.Background(), cfg)
 	if err != nil {
 		log.Fatal(err)

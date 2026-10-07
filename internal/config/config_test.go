@@ -10,17 +10,6 @@ func TestLoadRequiresDatabaseAndStrongJWTSecret(t *testing.T) {
 	}
 }
 
-func TestMigrationURLFallsBackToRuntimeURL(t *testing.T) {
-	cfg := Config{DatabaseURL: "runtime", MigrationDBURL: ""}
-	if got := cfg.MigrationURL(); got != "runtime" {
-		t.Fatalf("got %q", got)
-	}
-	cfg.MigrationDBURL = "direct"
-	if got := cfg.MigrationURL(); got != "direct" {
-		t.Fatalf("got %q", got)
-	}
-}
-
 func TestLoadRejectsMalformedDurations(t *testing.T) {
 	t.Setenv("DATABASE_URL", "postgresql://example")
 	t.Setenv("JWT_SECRET", "01234567890123456789012345678901")

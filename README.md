@@ -34,8 +34,7 @@ curl -X POST http://localhost:8080/api/v1/auth/register \
 | 변수 | 용도 | 기본값 |
 | --- | --- | --- |
 | `HTTP_ADDR` | 서버 리스닝 주소 | `:8080` |
-| `DATABASE_URL` | 런타임 PostgreSQL URL, Neon의 pooled URL 사용 | 필수 |
-| `MIGRATION_DATABASE_URL` | 마이그레이션용 URL, Neon의 direct URL 사용 | `DATABASE_URL` |
+| `DATABASE_URL` | 서버와 마이그레이션에서 사용하는 PostgreSQL URL, Neon의 pooled URL 사용 | 필수 |
 | `JWT_SECRET` | HS256 시크릿, 32자 이상 | 필수 |
 | `JWT_TTL` | 액세스 토큰 유효 기간 | `1h` |
 | `CORS_ORIGINS` | 콤마로 구분된 프론트엔드 origin 목록 | `http://localhost:3000` |
@@ -72,7 +71,7 @@ DB 구조는 `internal/model/model.go`의 GORM 모델과 태그로 관리합니�
 - ALB 헬스 체크: `/health/ready`
 - Liveness 신호: `/health/live`
 - 종료 처리: `SIGTERM` 수신, 10초의 정상 종료(graceful shutdown) 타임아웃
-- 데이터베이스 변경: 애플리케이션 태스크를 배포하기 전에 Neon의 direct URL을 사용해 `cmd/migrate`를 일회성 ECS 태스크로 실행
+- 데이터베이스 변경: 애플리케이션 태스크를 배포하기 전에 `DATABASE_URL`로 `cmd/migrate`를 일회성 ECS 태스크로 실행
 
 ## 라이선스
 

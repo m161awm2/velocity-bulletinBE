@@ -53,7 +53,7 @@ func New(svc *service.Service, st *store.Store, tokens *auth.Manager, logger *lo
 	secured.DELETE("/comments/:id", a.deleteComment)
 
 	admin := secured.Group("/admin")
-	admin.Use(a.requireAdmin())
+	admin.Use(a.requireAdmin)
 	admin.GET("/users", a.listUsers)
 	admin.PATCH("/users/:id/status", a.setUserStatus)
 	return r
@@ -147,7 +147,7 @@ func (a *API) authenticate(c *gin.Context) {
 		fail(c, http.StatusUnauthorized, "UNAUTHORIZED", "invalid token")
 		return
 	}
-	user, err := a.service.User(c.Request.Context(), id)
+	user, err := a.service.User(c.Request.Context(), id) // User가 활성상태인가...
 	if err != nil || !user.Active {
 		fail(c, http.StatusUnauthorized, "UNAUTHORIZED", "user is unavailable")
 		return
@@ -156,12 +156,10 @@ func (a *API) authenticate(c *gin.Context) {
 	c.Next()
 }
 
-func (a *API) requireAdmin() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		if user := actor(c); user == nil || user.Role != model.RoleAdmin {
-			fail(c, http.StatusForbidden, "FORBIDDEN", "administrator role required")
-			return
-		}
-		c.Next()
+func (a *API) requireAdmin(c *gin.Context) {
+	if user := actor(c); user == nil || user.Role != model.RoleAdmin {
+		fail(c, http.StatusForbidden, "FORBIDDEN", "administrator role required")
+		return
 	}
+	c.Next()
 }
